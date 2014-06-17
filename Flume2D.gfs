@@ -258,7 +258,7 @@
 # }
 ##########################################
   # Grid Resolution
-  Refine 6
+  Refine 5
 
   # Time
   Time { end = 5. }
@@ -357,12 +357,12 @@ GfsBox{
   }
 #  wave paddle just U or projection on the normal of the paddle?
   left = Boundary {
-    BcDirichlet U 0.
+    BcDirichlet U (PADDLEAMPLITUDE*Class3Paddle(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength))
     BcNeumann V 0
     BcNeumann T 0
   }
   right = Boundary {
-    BcNeumann U (PADDLEAMPLITUDE*Class3Paddle(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength))
+    BcNeumann U 0.
     BcNeumann V 0
     BcNeumann T 0
   }
