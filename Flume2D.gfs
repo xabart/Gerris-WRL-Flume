@@ -139,6 +139,55 @@
            return 0. ;
          }
      }
+     double ShapeBeforeAppPointNormalCosine(double y,double S0,double a){
+        double dy= (-S0/(2. * pow(a,3))*(3.*pow(y,2) - 2.*3.*a*y));
+	double norm=sqrt(1+pow(dy,2.));
+	double cosine=1./norm;
+	return cosine;
+     }
+     double ShapeBeforeAppPointNormalSine(double y,double S0,double a){
+        double dy= (-S0/(2. * pow(a,3))*(3.*pow(y,2) - 2.*3.*a*y));
+	double norm=sqrt(1+pow(dy,2.));
+	double sine=dy/norm;
+	return sine;
+     }
+     double ShapeAfterAppPointNormalCosine(double y,double S0,double a){
+        double dy = (-S0/(2. * pow(a,3))*( - 3.*pow(a,2)));
+	double norm=sqrt(1+pow(dy,2.));
+	double cosine=1./norm;
+	return cosine;
+     }
+     double ShapeAfterAppPointNormalSine(double y,double S0,double a){
+        double dy = (-S0/(2. * pow(a,3))*( - 3.*pow(a,2)));
+	double norm=sqrt(1+pow(dy,2.));
+	double sine=dy/norm;
+	return sine;
+     }
+     double PaddleFlexiShapeNormalCosine(double y,double S0,double a, double TotalLength){
+         if ((y<=a) & (y>=0.)){
+         double res=ShapeBeforeAppPointNormalCosine( y,S0, a);
+           return res;
+         }
+         if ((y>a) & (y<=TotalLength)){
+           return ShapeAfterAppPointNormalCosine( y,S0, a);
+         }
+         else{
+           return 1. ;
+         }
+     }
+     double PaddleFlexiShapeNormalSine(double y,double S0,double a, double TotalLength){
+         if ((y<=a) & (y>=0.)){
+         double res=ShapeBeforeAppPointNormalSine( y,S0, a);
+           return res;
+         }
+         if ((y>a) & (y<=TotalLength)){
+           return ShapeAfterAppPointNormalSine( y,S0, a);
+         }
+         else{
+           return 0. ;
+         }
+     }
+     
 //###############################################################
     // Strait Paddle Functions
     //      total length TotalLength
@@ -150,6 +199,22 @@
      double PaddleStraitShape(double y,double S0,double a, double TotalLength){
          if ((y>=0.) & (y<=TotalLength)){
            return ( y * (S0/a));
+         }
+         else{
+           return 0. ;
+         }
+      }
+     double PaddleStraitShapeNormalCosine(double y,double S0,double a, double TotalLength){
+         if ((y>=0.) & (y<=TotalLength)){
+           return ( 1./sqrt(1.+ (S0/a)*(S0/a)));
+         }
+         else{
+           return 1. ;
+         }
+      }
+     double PaddleStraitShapeNormalSine(double y,double S0,double a, double TotalLength){
+         if ((y>=0.) & (y<=TotalLength)){
+           return ( (S0/a)/sqrt(1.+ (S0/a)*(S0/a)));
          }
          else{
            return 0. ;
@@ -243,6 +308,20 @@
            //return PaddlePiston(YY, S0, TotalLength);
      }
 
+     double Class3PaddleVelocityU(double YY,double ZZ,double t,double Omega,double coeft2,double N,double Xconv,double Zconv,double gravity,double a, double TotalLength){
+           double S0=Class3MotionLawVelocity(Omega, t, coeft2, N, Xconv, Zconv, ZZ, gravity);
+           return PaddleStraitShape(YY, S0, a, TotalLength)*PaddleStraitShapeNormalCosine(YY, S0, a, TotalLength);
+           //return PaddleFlexiShape (YY, S0, a, TotalLength);
+           //return PaddlePiston(YY, S0, TotalLength);
+     }
+
+     double Class3PaddleVelocityV(double YY,double ZZ,double t,double Omega,double coeft2,double N,double Xconv,double Zconv,double gravity,double a, double TotalLength){
+           double S0=Class3MotionLawVelocity(Omega, t, coeft2, N, Xconv, Zconv, ZZ, gravity);
+           return PaddleStraitShape(YY, S0, a, TotalLength)*PaddleStraitShapeNormalSine(YY, S0, a, TotalLength);
+           //return PaddleFlexiShape (YY, S0, a, TotalLength);
+           //return PaddlePiston(YY, S0, TotalLength);
+     }
+
  //#PADDLEAMPLITUDE*Class3Paddle(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength)
 //###############################################################
   }
@@ -330,7 +409,7 @@
 #  OutputTime { istep = 1 } balance
 #  OutputBalance { istep = 1 } balance
    
-#   GfsOutputSimulation { step = 1 } stdout
+  GfsOutputSimulation { step = 0.1 }  snapshot-%g.vtk { format = VTK }
   GfsOutputTime            { istep = 1 } stdout
   GfsOutputProjectionStats { istep = 1 } stdout
   GfsOutputPPM             { step = 0.1 } test.ppm {
@@ -354,8 +433,8 @@ GfsBox{
   }
 #  wave paddle just U or projection on the normal of the paddle?
   left = Boundary {
-    BcDirichlet U (PADDLEAMPLITUDE*Class3Paddle(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength))
-    BcNeumann V 0
+    BcDirichlet U (PADDLEAMPLITUDE*Class3PaddleVelocityU(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength))
+    BcDirichlet V (PADDLEAMPLITUDE*Class3PaddleVelocityV(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength))
     BcNeumann T 0
   }
   right = Boundary {

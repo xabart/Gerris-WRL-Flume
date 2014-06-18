@@ -34,6 +34,15 @@ using namespace std;
            return 0. ;
          }
      }
+
+     std:pair<double,double> ShapeBeforeAppPointNormal(double y,double S0,double a){
+        double dy= (-S0/(2. * pow(a,3))*(3.*pow(y,2) - 2.*3.*a*y));
+	double norm=sqrt(1+pow(dy,2.));
+	double cosine=1./norm;
+	double sine=dy/norm;
+	return std::make_pair(cosine, sine)
+     }
+
 //###############################################################
     // Strait Paddle Functions
     //      total length TotalLength
@@ -147,7 +156,8 @@ int main() {
 	double S0 = 1;
 	double a = 0.5;
 	double TotalLength=1.;
-	
+
+        std::pair <double,double> angle= ShapeBeforeAppPointNormal(0.1,S0,a,);	
 	printf("%f \n",PaddleFlexiShape(-1.,S0,a,TotalLength));
 	printf("%f \n",PaddleFlexiShape(0.,S0,a,TotalLength));
 	printf("%f \n",PaddleFlexiShape(0.1,S0,a,TotalLength));
@@ -158,6 +168,8 @@ int main() {
 	printf("%f \n",PaddleStraitShape(0.4,S0,a,TotalLength));
 	printf("%f \n",PaddleStraitShape(1.5,S0,a,TotalLength));
 	
+	printf("%f \n",angle.first);
+	printf("%f \n",angle.second);
 	
 	
 	return 0;
