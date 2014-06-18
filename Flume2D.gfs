@@ -74,7 +74,7 @@
 ###############################################################
   Global {
     // double M_PI=3.141592653589793 ;
-    double PADDLEAMPLITUDE = -0.25*0.3;
+    double PADDLEAMPLITUDE = -0.25*0.03;
     double paddletimeshift = -2.;
     double H0=0.5;
     double L = 1 ;
@@ -99,12 +99,13 @@
     double   PXconv=-1.;
     double   PZconv=0.;
     #define  Papp (H0)
-    #define  PTotalLength  (1.1*H0)
+    #define  PTotalLength  (1.2*H0)
 
 //###############################################################
 //##   2 fluid phases
 //###############################################################
     // The CLAMP function has the mission to keep values of the tracer within 0 and 1.
+    // Water T=1 air T=0
     // You can use dtmax = 1e-2 to decrease time steps.
     #define VAR(T,min,max) (min + CLAMP(T,0,1)*(max - min))
     #define RHO(T)               VAR(T,ratio_rho,1.)
@@ -296,16 +297,13 @@
     }
 
   # Init of free surface
-  InitFraction {}  T ( (y-H0) )
+  InitFraction {}  T ( (H0-y) )
 
 
   # Density
-  #air/water density ratio si T1=0 ratio_rho si T1=1 1
-  #PhysicalParams { alpha = 1./(VAR(T1,ratio_rho,1.)) }
   PhysicalParams { alpha = 1./RHO(T1) }
 
   # Viscosity
-  #SourceViscosity (1./Re)*(T1*ratio_mu + (1-T1)*1.)
  # SourceViscosity (1./Re)*MU(T1)
 
   # Gravity
@@ -317,9 +315,8 @@
   # AdaptGradient { istep = 1 } { maxlevel = 5 cmax = 1e-2 } T
   # AdaptGradient { istep = 1 } { cmax = 0.0 maxlevel = LEVEL1 } (U*T)
 
-  #SolidMoving { istep = 1 } (Class3Paddle(y,0., t,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength),y) { } { level = 5 }
 
-  #RemoveDroplets { istep = 1 } T -2
+  RemoveDroplets { istep = 1 } T -2
 
   # Balance the number of elements across parallel subdomains at every
   # timestep if the imbalance is larger than 0.1 (i.e. 10% difference
