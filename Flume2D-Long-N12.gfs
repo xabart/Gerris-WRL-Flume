@@ -414,10 +414,10 @@
 #  OutputTime { istep = 1 } balance
 #  OutputBalance { istep = 1 } balance
    
-  GfsOutputSimulation { istep = 100 } snapshot-%ld.gfs
+  GfsOutputSimulation { istep = 1 } snapshot-%ld.gfs
 #  GfsOutputSimulation { step = 0.1 }  snapshot-%g.vtk { format = VTK }
-#  GfsOutputTime            { istep = 1 } stdout
-#  GfsOutputProjectionStats { istep = 1 } stdout
+  GfsOutputTime            { istep = 1 } stdout
+  GfsOutputProjectionStats { istep = 1 } stdout
 #  GfsOutputPPM             { step = 0.1 } test.ppm {
 #    v = T1 
 #    min = 0
