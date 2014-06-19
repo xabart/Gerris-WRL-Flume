@@ -67,7 +67,7 @@
 ##################################################
 
 
-1 0 GfsSimulation GfsBox GfsGEdge {
+12 11 GfsSimulation GfsBox GfsGEdge {
 ##############################################################
   # shift origin of the domain
    x = 0.5 y = 0.5 } {
@@ -343,10 +343,10 @@
 # }
 ##########################################
   # Grid Resolution
-  Refine 6
+  Refine 7
 
   # Time
-  Time { end = 5. }
+  Time { end = 25. }
 
   # Tolerance for poisson
   ProjectionParams { tolerance = 1.e-6 nitermax = 10000}
@@ -400,12 +400,12 @@
   # AdaptGradient { istep = 1 } { cmax = 0.0 maxlevel = LEVEL1 } (U*T)
 
 
-  #RemoveDroplets { istep = 1 } T -2
+  RemoveDroplets { istep = 1 } T -2
 
   # Balance the number of elements across parallel subdomains at every
   # timestep if the imbalance is larger than 0.1 (i.e. 10% difference
   # between the largest and smallest subdomains).
-  # EventBalance { istep = 1 } 0.1
+  EventBalance { istep = 1 } 0.1
 
   # Writes the time and timestep every 10 timesteps on standard error
 #  OutputTime { istep = 10 } stderr
@@ -414,14 +414,15 @@
 #  OutputTime { istep = 1 } balance
 #  OutputBalance { istep = 1 } balance
    
-  GfsOutputSimulation { step = 0.1 }  snapshot-%g.vtk { format = VTK }
-  GfsOutputTime            { istep = 1 } stdout
-  GfsOutputProjectionStats { istep = 1 } stdout
-  GfsOutputPPM             { step = 0.1 } test.ppm {
-    v = T1 
-    min = 0
-    max =  1.
-  }
+  GfsOutputSimulation { istep = 100 } snapshot-%ld.gfs
+#  GfsOutputSimulation { step = 0.1 }  snapshot-%g.vtk { format = VTK }
+#  GfsOutputTime            { istep = 1 } stdout
+#  GfsOutputProjectionStats { istep = 1 } stdout
+#  GfsOutputPPM             { step = 0.1 } test.ppm {
+#    v = T1 
+#    min = 0
+#    max =  1.
+#  }
 }
 GfsBox{
 #  Slip BC
@@ -442,9 +443,174 @@ GfsBox{
     BcDirichlet V (PADDLEAMPLITUDE*Class3PaddleVelocityV(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength))
     BcNeumann T 0
   }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
   right = Boundary {
     BcNeumann U 0.
     BcNeumann V 0
     BcNeumann T 0
   }
 }
+1 2 right
+2 3 right
+3 4 right
+4 5 right
+5 6 right
+6 7 right
+7 8 right
+8 9 right
+9 10 right
+10 11 right
+11 12 right
