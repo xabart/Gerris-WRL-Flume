@@ -97,7 +97,7 @@
 //###############################################################
 //## Paddle quantities
 //###############################################################
-    double PADDLEAMPLITUDE = -0.25*0.0520;
+    #define  PADDLEAMPLITUDE (Lcoef*-0.25*0.0520)
     double   Pcoeft2=WsimCoeft2;
     double   PN=5;
     double   PXconv=-1.;
@@ -414,7 +414,7 @@
 #  OutputTime { istep = 1 } balance
 #  OutputBalance { istep = 1 } balance
    
-  GfsOutputSimulation { istep = 1 } snapshot-%ld.gfs
+  GfsOutputSimulation { istep = 1 } snapshot-%05d.gfs
 #  GfsOutputSimulation { step = 0.1 }  snapshot-%g.vtk { format = VTK }
   GfsOutputTime            { istep = 1 } stdout
   GfsOutputProjectionStats { istep = 1 } stdout
