@@ -329,19 +329,7 @@
 
  //#PADDLEAMPLITUDE*Class3Paddle(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength)
 //###############################################################
-     double ViscosityAndAbsorbingLayer(double T,double X, double Xlayer){
-          double coef=12.;
-	  if (X<Xlayer){
-	     return MU(T);
-          }
-          else{
-	     return MU(T) + exp(coef*(X-Xlayer)) + coef*(-X+Xlayer)-1.;
-	  }
-     } 
-//###############################################################
-//###############################################################
-     double AbsorbingLayer(double T,double X, double Xlayer){
-          double coef=12.;
+     double AbsorbingLayer(double X, double Xlayer, double coef){
 	  if (X<Xlayer){
 	     return 0.;
           }
@@ -409,8 +397,8 @@
   PhysicalParams { alpha = 1./RHO(T1) }
 
   # Viscosity
-  SourceViscosity (1./Re_w)*ViscosityAndAbsorbingLayer(T1,x, 0.5)
-  #SourceViscosity (1./Re)*MU(T1)
+  #SourceViscosity (1./Re_w)*(MU(T1)+AbsorbingLayer(x, 0.5, 5.))
+  SourceViscosity (1./Re_w)*(AbsorbingLayer(x, 0.5, 5.))
 
   # Gravity
   Source {} V (-g)
