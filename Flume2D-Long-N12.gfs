@@ -334,7 +334,7 @@
 	     return 0.;
           }
           else{
-	     return 0. + exp(coef*(X-Xlayer)) + coef*(-X+Xlayer)-1.;
+	     return ( exp(coef*(X-Xlayer)) + coef*(-X+Xlayer)-1.);
 	  }
      } 
 //###############################################################
@@ -358,8 +358,8 @@
   Time { end = 25. }
 
   # Tolerance for poisson
-  ProjectionParams { tolerance = 1.e-6 nitermax = 10000}
-  ApproxProjectionParams { tolerance = 1.e-6 nitermax = 10000}
+  ProjectionParams { tolerance = 1.e-6 nitermax = 15000}
+  ApproxProjectionParams { tolerance = 1.e-6 nitermax = 15000}
 
 
   # parameters of various advection schemes
@@ -398,17 +398,17 @@
 
   # Viscosity
   ##Viscous flow and absorbing zone
-  #SourceViscosity ((1./Re_w)*(MU(T1)+AbsorbingLayer(x, 0.5, 5.)))
-  # Non-Viscous flow and absorbing zone
-  ##SourceViscosity ((1./Re_w)*(AbsorbingLayer(x, 0.5, 5.)))
+  #SourceViscosity ((1./Re_w)*(MU(T1)+AbsorbingLayer(x, 11., 2.)))
+  ## Non-Viscous flow and absorbing zone
+  SourceViscosity ((1./Re_w)*(AbsorbingLayer(x, 11., 3.)))
 
   # Gravity
   Source {} V (-g)
   Source {} U (0.)
 
   # AMR
-  # AdaptVorticity { istep = 1 } { maxlevel = 9 cmax = 1e-2 }
-  # AdaptGradient { istep = 1 } { maxlevel = 5 cmax = 1e-2 } T
+   AdaptVorticity { istep = 1 } { maxlevel = 9 cmax = 1e-2 }
+   AdaptGradient { istep = 1 } { maxlevel = 9 cmax = 1e-2 } T
   # AdaptGradient { istep = 1 } { cmax = 0.0 maxlevel = LEVEL1 } (U*T)
 
 
@@ -426,7 +426,7 @@
 #  OutputTime { istep = 1 } balance
 #  OutputBalance { istep = 1 } balance
    
-  GfsOutputSimulation { istep = 1 } snapshot-%05d.gfs
+  GfsOutputSimulation { istep = 1 } Flume-test-viscouslayer-AMR-%ld.gfs
 #  GfsOutputSimulation { step = 0.1 }  snapshot-%g.vtk { format = VTK }
   GfsOutputTime            { istep = 1 } stdout
   GfsOutputProjectionStats { istep = 1 } stdout
