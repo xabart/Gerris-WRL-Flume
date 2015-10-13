@@ -1,0 +1,634 @@
+#
+#  2D finite flume from WRL
+#########################################################################################################
+##########################################################################################################
+# Remember : Gerris solves Fluid Mechanics Incompressible Navier-Stokes
+##########################################################################################################
+# \div.u = 0
+#
+#      d u
+# \rho ----- =  - \grad p + \div(\mu(\grad u + \grad u^T)) + \sigma \kappa ( \delta_s n)   + \rho f
+#      d t
+#
+# equations are written in the following form
+#
+#\div U = 0
+#
+#  d U
+# ----- = alpha ( -\grad P + (SourceViscosity (\grad U+\grad U^T)) + GfsSourceTension GfsVariableCurvature ( \delta_s n)) + Source(U)
+#  d t
+#
+# parameters are indeed :
+# 1/\rho        alpha                   elementary volume          http://gfs.sourceforge.net/wiki/index.php/GfsPhysicalParams
+# \mu           SourceViscosity dynamic viscosity                  http://gfs.sourceforge.net/wiki/index.php/GfsSourceViscosity
+# \sigma        GfsSourceTension        surface tension            http://gfs.sourceforge.net/wiki/index.php/GfsSourceTension
+# \kappa        GfsVariableCurvature    courbure                   http://gfs.sourceforge.net/wiki/index.php/GfsVariableCurvature
+# f             Source                  supplementary acceleration http://gfs.sourceforge.net/wiki/index.php/GfsSource
+#
+#
+# Of course, Gerris is dimensionless. Dimensionless variables:
+# u = U_0 u, v = U_0 v,  x = L x,  y = L y,  t = L/U_0 t,     p = \rho U_0^2 p
+# \rho = \rho_0 \bar{\rho}, \mu = \mu_0 \bar{\mu},  \sigma = \sigma_0 \bar{\sigma}
+#
+# which gives, taking care of the fact that \div n = \kappa , la courbure \kappa = \bar{\kappa} /L,
+# and \delta_s = \bar{delta_s} L
+#
+#  \div \bar{U} = 0
+#
+#             d u                         1                                           1
+#  \bar{rho} ----- =  - \grad \bar{p} + (---) \div(\bar{\mu}(\grad u + \grad u^T)) + --- \bar{\kappa} ( \bar{\delta_s} n)
+#             d t                         Re                                          We
+#
+# with the following non dimension numbers Re = \rho_0 U_0 L/\mu_0  et  We = \rho_0 U_0^2 L/\sigma_0
+#
+#
+#########################################################################################################
+##########################################################################################################
+
+#########################################################################################################
+##########################################################################################################
+# in our case
+##################################################
+#
+#  L = 1                         wave lenght
+#  g = 2 pi                      gravity
+#  Time = 1                         period
+#  omega = 2*pi/T = 2*pi
+#  U0 = (g/omega)=1
+#  pho_w = 1000                  water density
+#  pho_a = 1.225                 air density
+#  mu_w = 1.002 e-3              water viscosity
+#  mu_a = 1.79 e-5               air viscosity
+#  sigma_0 = 7.286 e-2           specific surface tension water/air (N/m)
+#  Re = 1000*1*1/mu_w= 998004    Reynolds number (water)
+#  We = 1000/7.286 e-2 =  13725  Weber number(water)
+#  H0 water depth
+#
+##################################################
+
+
+12 11 GfsSimulation GfsBox GfsGEdge {
+##############################################################
+  # shift origin of the domain
+   x = 0.5 y = 0.5 } {
+###############################################################
+  Global {
+    double H0=0.5;
+    double L = 1 ;
+    double g = 2*M_PI;
+    double Time = 1;
+    double pho_w = 1000;
+    double pho_a = 1.225 ;
+    double mu_w = 1.002E-3 ;
+    double mu_a = 1.79E-5  ;
+    double sigma_0 = 7.286E-2 ;
+    #define omega      (2.* M_PI / Time)
+    #define U0         (g/omega)
+    #define Re_w       (pho_w*U0*L/mu_w)
+    #define We_w       (pho_w*U0*U0/sigma_0)
+    #define ratio_rho  (pho_a /pho_w)
+    #define ratio_mu   (mu_a/mu_w)
+//###############################################################
+//## Non dimension from WSIM
+//###############################################################
+    double Lcoef=0.504266521692;
+    double Tcoef=0.283295798704;
+    #define WsimCoeft2 (0.018/1.78)
+//###############################################################
+//## Paddle quantities
+//###############################################################
+    #define  PADDLEAMPLITUDE (Lcoef*-0.25*0.0520)
+    double   Pcoeft2=WsimCoeft2;
+    double   PN=5;
+    double   PXconv=-1.;
+    double   PZconv=0.;
+    double paddletimeshift = -2.;
+    #define  Papp (H0)
+    #define  PTotalLength  (1.2*H0)
+
+//###############################################################
+//##   2 fluid phases
+//###############################################################
+    // The CLAMP function has the mission to keep values of the tracer within 0 and 1.
+    // Water T=1 air T=0
+    // You can use dtmax = 1e-2 to decrease time steps.
+    #define VAR(T,min,max) (min + CLAMP(T,0,1)*(max - min))
+    #define RHO(T)               VAR(T,ratio_rho,1.)
+    #define MU(T)                VAR(T,ratio_mu,1.)
+
+//###############################################################
+    // FlexPaddle Functions
+    //      total length TotalLength
+    //      Y where to apply the motion law : a
+    //      motion law : S0
+    //      y: ordinate where to calcultate paddle pos
+//###############################################################
+
+     double ShapeBeforeAppPoint(double y,double S0,double a){
+        return  (-S0/(2. * pow(a,3))*(pow(y,3) - 3.*a*pow(y,2)));
+     }
+
+     double ShapeAfterAppPoint(double y,double S0,double a){
+         return  (-S0/(2. * pow(a,3))*(pow(a,3) - 3.*y*pow(a,2)));
+     }
+
+     double PaddleFlexiShape(double y,double S0,double a, double TotalLength){
+         if ((y<=a) & (y>=0.)){
+         double res=ShapeBeforeAppPoint( y,S0, a);
+           return res;
+         }
+         if ((y>a) & (y<=TotalLength)){
+           return ShapeAfterAppPoint( y,S0, a);
+         }
+         else{
+           return 0. ;
+         }
+     }
+     double ShapeBeforeAppPointNormalCosine(double y,double S0,double a){
+        double dy= (-S0/(2. * pow(a,3))*(3.*pow(y,2) - 2.*3.*a*y));
+	double norm=sqrt(1+pow(dy,2.));
+	double cosine=1./norm;
+	return cosine;
+     }
+     double ShapeBeforeAppPointNormalSine(double y,double S0,double a){
+        double dy= (-S0/(2. * pow(a,3))*(3.*pow(y,2) - 2.*3.*a*y));
+	double norm=sqrt(1+pow(dy,2.));
+	double sine=dy/norm;
+	return sine;
+     }
+     double ShapeAfterAppPointNormalCosine(double y,double S0,double a){
+        double dy = (-S0/(2. * pow(a,3))*( - 3.*pow(a,2)));
+	double norm=sqrt(1+pow(dy,2.));
+	double cosine=1./norm;
+	return cosine;
+     }
+     double ShapeAfterAppPointNormalSine(double y,double S0,double a){
+        double dy = (-S0/(2. * pow(a,3))*( - 3.*pow(a,2)));
+	double norm=sqrt(1+pow(dy,2.));
+	double sine=dy/norm;
+	return sine;
+     }
+     double PaddleFlexiShapeNormalCosine(double y,double S0,double a, double TotalLength){
+         if ((y<=a) & (y>=0.)){
+         double res=ShapeBeforeAppPointNormalCosine( y,S0, a);
+           return res;
+         }
+         if ((y>a) & (y<=TotalLength)){
+           return ShapeAfterAppPointNormalCosine( y,S0, a);
+         }
+         else{
+           return 1. ;
+         }
+     }
+     double PaddleFlexiShapeNormalSine(double y,double S0,double a, double TotalLength){
+         if ((y<=a) & (y>=0.)){
+         double res=ShapeBeforeAppPointNormalSine( y,S0, a);
+           return res;
+         }
+         if ((y>a) & (y<=TotalLength)){
+           return ShapeAfterAppPointNormalSine( y,S0, a);
+         }
+         else{
+           return 0. ;
+         }
+     }
+     
+//###############################################################
+    // Strait Paddle Functions
+    //      total length TotalLength
+    //      Y where to apply the motion law : a
+    //      motion law : S0
+    //      y: ordinate where to calcultate paddle pos
+//###############################################################
+
+     double PaddleStraitShape(double y,double S0,double a, double TotalLength){
+         if ((y>=0.) & (y<=TotalLength)){
+           return ( y * (S0/a));
+         }
+         else{
+           return 0. ;
+         }
+      }
+     double PaddleStraitShapeNormalCosine(double y,double S0,double a, double TotalLength){
+         if ((y>=0.) & (y<=TotalLength)){
+           return ( 1./sqrt(1.+ (S0/a)*(S0/a)));
+         }
+         else{
+           return 1. ;
+         }
+      }
+     double PaddleStraitShapeNormalSine(double y,double S0,double a, double TotalLength){
+         if ((y>=0.) & (y<=TotalLength)){
+           return ( (S0/a)/sqrt(1.+ (S0/a)*(S0/a)));
+         }
+         else{
+           return 0. ;
+         }
+      }
+//###############################################################
+    // Piston Paddle Functions
+    //      total length TotalLength
+    //      motion law : S0
+    //      y: ordinate where to calcultate paddle pos
+//###############################################################
+
+     double PaddlePiston(double y,double S0, double TotalLength){
+         if ((y>=0.) & (y<=TotalLength)){
+           return (S0);
+         }
+         else{
+           return 0. ;
+         }
+      }
+//###############################################################
+    // 3D Paddle Phase
+//###############################################################
+     double Phase3D(double Xconv,double Zconv,double Omega,double ZZ,double gravity){
+        if (Xconv>0.){
+          double Kp=(pow(Omega,2)/gravity);
+          double theta=atan2(ZZ-Zconv,Xconv);
+          double PPhase=Kp*(Xconv*cos(theta)+Zconv*sin(theta))-Kp*sin(theta)*ZZ+0.5*M_PI;
+          return PPhase;
+        }
+        else {
+          return 0.;
+        }
+     }
+
+//###############################################################
+    // Paddle motion laws
+//###############################################################
+     double Class3PaddleOS(double Omega,double t,double coeft2,double Phase){
+        double CCC = (Omega *(t- 0.5*Omega *coeft2*pow(t,2))+Phase) ;
+        double OS = sin(CCC) ;
+        return OS ;
+     }
+
+     double Class3PaddleOST(double Omega,double t,double coeft2,double Phase){
+        double CCC = (Omega *(t - 0.5*Omega *coeft2*pow(t,2))+Phase) ;
+        double OST = Omega *(1. - Omega *coeft2*t)*cos(CCC) ;
+        return OST ;
+     }
+
+     double Class3PaddleDAMP(double Omega,double t,double N){
+        double AAA= (4.*(-2.*N*M_PI + Omega*t))/(N *M_PI);
+        double BBB= (4.*Omega*t)/(N*M_PI);
+        double DAMP=(1. + tanh(BBB))*(1. - tanh(AAA));
+        return DAMP;
+     }
+
+     double Class3PaddleDAMPT(double Omega,double t,double N){
+        double AAA= (4.*(-2.*N*M_PI + Omega*t))/(N *M_PI);
+        double BBB= (4.*Omega*t)/(N*M_PI);
+        double DDD= (4.*Omega) / (N*M_PI);
+
+        double CAAA=1./cosh(AAA);
+        double CBBB=1./cosh(BBB);
+
+        double DAMPT=DDD*(-(CAAA*CAAA)*(1. + tanh(BBB)) + (CBBB*CBBB)*(1 - tanh(AAA)));
+
+        return DAMPT;
+     }
+
+     double Class3MotionLaw(double Omega,double t,double coeft2,double N,double Xconv,double Zconv,double ZZ,double gravity){
+           return Class3PaddleOS(Omega,t,coeft2,Phase3D(Xconv,Zconv,Omega,ZZ,gravity))*Class3PaddleDAMP(Omega,t,N) ;
+     }
+
+     double Class3MotionLawVelocity(double Omega,double t,double coeft2,double N,double Xconv,double Zconv,double ZZ,double gravity){
+           return Class3PaddleOST(Omega,t,coeft2,Phase3D(Xconv,Zconv,Omega,ZZ,gravity))*Class3PaddleDAMP(Omega,t,N) \
+           + Class3PaddleOS(Omega,t,coeft2,Phase3D(Xconv,Zconv,Omega,ZZ,gravity))*Class3PaddleDAMPT(Omega,t,N);
+     }
+
+     double Class3Paddle(double YY,double ZZ,double t,double Omega,double coeft2,double N,double Xconv,double Zconv,double gravity,double a, double TotalLength){
+           double S0=Class3MotionLaw(Omega, t, coeft2, N, Xconv, Zconv, ZZ, gravity);
+           return PaddleStraitShape(YY, S0, a, TotalLength);
+           //return PaddleFlexiShape (YY, S0, a, TotalLength);
+           //return PaddlePiston(YY, S0, TotalLength);
+     }
+
+     double Class3PaddleVelocity(double YY,double ZZ,double t,double Omega,double coeft2,double N,double Xconv,double Zconv,double gravity,double a, double TotalLength){
+           double S0=Class3MotionLawVelocity(Omega, t, coeft2, N, Xconv, Zconv, ZZ, gravity);
+           return PaddleStraitShape(YY, S0, a, TotalLength);
+           //return PaddleFlexiShape (YY, S0, a, TotalLength);
+           //return PaddlePiston(YY, S0, TotalLength);
+     }
+
+     double Class3PaddleVelocityU(double YY,double ZZ,double t,double Omega,double coeft2,double N,double Xconv,double Zconv,double gravity,double a, double TotalLength){
+           double S0=Class3MotionLawVelocity(Omega, t, coeft2, N, Xconv, Zconv, ZZ, gravity);
+           return PaddleStraitShape(YY, S0, a, TotalLength)*PaddleStraitShapeNormalCosine(YY, S0, a, TotalLength);
+           //return PaddleFlexiShape (YY, S0, a, TotalLength);
+           //return PaddlePiston(YY, S0, TotalLength);
+     }
+
+     double Class3PaddleVelocityV(double YY,double ZZ,double t,double Omega,double coeft2,double N,double Xconv,double Zconv,double gravity,double a, double TotalLength){
+           double S0=Class3MotionLawVelocity(Omega, t, coeft2, N, Xconv, Zconv, ZZ, gravity);
+           return PaddleStraitShape(YY, S0, a, TotalLength)*PaddleStraitShapeNormalSine(YY, S0, a, TotalLength);
+           //return PaddleFlexiShape (YY, S0, a, TotalLength);
+           //return PaddlePiston(YY, S0, TotalLength);
+     }
+
+ //#PADDLEAMPLITUDE*Class3Paddle(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength)
+//###############################################################
+     double AbsorbingLayer(double X, double Xlayer, double coef){
+	  if (X<Xlayer){
+	     return 0.;
+          }
+          else{
+	     return ( exp(coef*(X-Xlayer)) + coef*(-X+Xlayer)-1.);
+	  }
+     } 
+//###############################################################
+  }
+###############################################################
+# http://gfs.sourceforge.net/wiki/index.php/Hypre
+#  GModule hypre {
+#  solver_type      = boomer_amg
+#  precond_type     = none
+#  relax_type       = gs-j
+#  coarsening_type  = cgc_e
+#  cycle_type       = 1
+#  nlevel           = 0
+#  verbose          = 0
+# }
+##########################################
+  # Grid Resolution
+  Refine 7
+
+  # Time
+  Time { end = 25. }
+
+  # Tolerance for poisson
+  ProjectionParams { tolerance = 1.e-6 nitermax = 15000}
+  ApproxProjectionParams { tolerance = 1.e-6 nitermax = 15000}
+
+
+  # parameters of various advection schemes
+  GfsAdvectionParams {
+  cfl = 0.4
+  }
+  # Variable for the interface (VOF)
+  VariableTracerVOFHeight T
+
+  # In case of high density ratio
+  VariableFiltered T1 T 1
+
+  # Curvature of the interface
+  #VariableCurvature K T
+
+  # Coefficient for surface tension = 1/We^2
+#  SourceTension T {1./(We*We)} K
+
+  # Init of the velocity field
+#  wave paddle just U or projection on the normal of the paddle?
+  # Init { istep = 1 } {
+	#UPaddle = PADDLEAMPLITUDE*Class3Paddle(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength)
+	#V0 = 0.
+    #}
+   Init { } {
+	U=0.
+	V=0.
+    }
+
+  # Init of free surface
+  InitFraction {}  T ( (H0-y) )
+
+
+  # Density
+  PhysicalParams { alpha = 1./RHO(T1) }
+
+  # Viscosity
+  ##Viscous flow and absorbing zone
+  #SourceViscosity ((1./Re_w)*(MU(T1)+AbsorbingLayer(x, 11., 2.)))
+  ## Non-Viscous flow and absorbing zone
+  SourceViscosity ((1./Re_w)*(AbsorbingLayer(x, 11., 3.)))
+
+  # Gravity
+  
+  #Source {} V (-g)
+  #Source {} U (0.)
+  # Use the reduced gravity approach
+  VariablePosition Z T z
+  # g = -g, g'=-g*(rho1-rho2) 
+  SourceTension T -g*(1.-ratio_rho ) Z
+  
+  
+  # AMR
+  # AdaptVorticity { istep = 1 } { maxlevel = 9 cmax = 1e-2 }
+  # AdaptGradient { istep = 1 } { maxlevel = 9 cmax = 1e-2 } T
+  # AdaptGradient { istep = 1 } { cmax = 0.0 maxlevel = LEVEL1 } (U*T)
+
+
+  RemoveDroplets { istep = 1 } T -2
+
+  # Balance the number of elements across parallel subdomains at every
+  # timestep if the imbalance is larger than 0.1 (i.e. 10% difference
+  # between the largest and smallest subdomains).
+  EventBalance { istep = 1 } 0.1
+
+  # Writes the time and timestep every 10 timesteps on standard error
+#  OutputTime { istep = 10 } stderr
+
+  # Writes the time and simulation balance every timestep in 'balance'
+#  OutputTime { istep = 1 } balance
+#  OutputBalance { istep = 1 } balance
+   
+  GfsOutputSimulation { istep = 1 } Flume-test-viscouslayer-AMR-%ld.gfs
+#  GfsOutputSimulation { step = 0.1 }  snapshot-%g.vtk { format = VTK }
+  GfsOutputTime            { istep = 1 } stdout
+  GfsOutputProjectionStats { istep = 1 } stdout
+#  GfsOutputPPM             { step = 0.1 } test.ppm {
+#    v = T1 
+#    min = 0
+#    max =  1.
+#  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  wave paddle just U or projection on the normal of the paddle?
+  left = Boundary {
+    BcDirichlet U (PADDLEAMPLITUDE*Class3PaddleVelocityU(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength))
+    BcDirichlet V (PADDLEAMPLITUDE*Class3PaddleVelocityV(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength))
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+#  Slip BC
+  bottom = Boundary {
+    BcNeumann U 0
+    BcDirichlet V 0
+    BcNeumann T 0
+  }
+  right = Boundary {
+    BcNeumann U 0.
+    BcNeumann V 0
+    BcNeumann T 0
+  }
+}
+1 2 right
+2 3 right
+3 4 right
+4 5 right
+5 6 right
+6 7 right
+7 8 right
+8 9 right
+9 10 right
+10 11 right
+11 12 right
