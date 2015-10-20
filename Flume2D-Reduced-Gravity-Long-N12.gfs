@@ -88,15 +88,16 @@
     #define We_w       (pho_w*U0*U0/sigma_0)
     #define ratio_rho  (pho_a /pho_w)
     #define ratio_mu   (mu_a/mu_w)
-//###############################################################
-//## Non dimension from WSIM
-//###############################################################
+    #define Greduced   (g/pho_w)
+// ###############################################################
+// ## Non dimension from WSIM
+// ###############################################################
     double Lcoef=0.504266521692;
     double Tcoef=0.283295798704;
     #define WsimCoeft2 (0.018/1.78)
-//###############################################################
-//## Paddle quantities
-//###############################################################
+// ###############################################################
+// ## Paddle quantities
+// ###############################################################
     #define  PADDLEAMPLITUDE (Lcoef*-0.25*0.0520)
     double   Pcoeft2=WsimCoeft2;
     double   PN=5;
@@ -106,9 +107,9 @@
     #define  Papp (H0)
     #define  PTotalLength  (1.2*H0)
 
-//###############################################################
-//##   2 fluid phases
-//###############################################################
+// ###############################################################
+// ##   2 fluid phases
+// ###############################################################
     // The CLAMP function has the mission to keep values of the tracer within 0 and 1.
     // Water T=1 air T=0
     // You can use dtmax = 1e-2 to decrease time steps.
@@ -116,13 +117,13 @@
     #define RHO(T)               VAR(T,ratio_rho,1.)
     #define MU(T)                VAR(T,ratio_mu,1.)
 
-//###############################################################
+// ###############################################################
     // FlexPaddle Functions
     //      total length TotalLength
     //      Y where to apply the motion law : a
     //      motion law : S0
     //      y: ordinate where to calcultate paddle pos
-//###############################################################
+// ###############################################################
 
      double ShapeBeforeAppPoint(double y,double S0,double a){
         return  (-S0/(2. * pow(a,3))*(pow(y,3) - 3.*a*pow(y,2)));
@@ -193,13 +194,13 @@
          }
      }
      
-//###############################################################
+// ###############################################################
     // Strait Paddle Functions
     //      total length TotalLength
     //      Y where to apply the motion law : a
     //      motion law : S0
     //      y: ordinate where to calcultate paddle pos
-//###############################################################
+// ###############################################################
 
      double PaddleStraitShape(double y,double S0,double a, double TotalLength){
          if ((y>=0.) & (y<=TotalLength)){
@@ -225,12 +226,12 @@
            return 0. ;
          }
       }
-//###############################################################
+// ###############################################################
     // Piston Paddle Functions
     //      total length TotalLength
     //      motion law : S0
     //      y: ordinate where to calcultate paddle pos
-//###############################################################
+// ###############################################################
 
      double PaddlePiston(double y,double S0, double TotalLength){
          if ((y>=0.) & (y<=TotalLength)){
@@ -255,9 +256,9 @@
         }
      }
 
-//###############################################################
+// ###############################################################
     // Paddle motion laws
-//###############################################################
+// ###############################################################
      double Class3PaddleOS(double Omega,double t,double coeft2,double Phase){
         double CCC = (Omega *(t- 0.5*Omega *coeft2*pow(t,2))+Phase) ;
         double OS = sin(CCC) ;
@@ -327,8 +328,8 @@
            //return PaddlePiston(YY, S0, TotalLength);
      }
 
- //#PADDLEAMPLITUDE*Class3Paddle(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength)
-//###############################################################
+ // #PADDLEAMPLITUDE*Class3Paddle(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength)
+// ###############################################################
      double AbsorbingLayer(double X, double Xlayer, double coef){
 	  if (X<Xlayer){
 	     return 0.;
@@ -337,35 +338,35 @@
 	     return ( exp(coef*(X-Xlayer)) + coef*(-X+Xlayer)-1.);
 	  }
      } 
-//###############################################################
+// ###############################################################
   }
 ###############################################################
 # http://gfs.sourceforge.net/wiki/index.php/Hypre
 #  GModule hypre {
 #  solver_type      = boomer_amg
 #  precond_type     = none
-#  relax_type       = gs-j
+#  relax_type	    = gs-j
 #  coarsening_type  = cgc_e
-#  cycle_type       = 1
-#  nlevel           = 0
-#  verbose          = 0
+#  cycle_type	    = 1
+#  nlevel	    = 0
+#  verbose	    = 0
 # }
 ##########################################
   # Grid Resolution
-  Refine 7
+  Refine 6
 
   # Time
-  Time { end = 25. }
+  Time { end = 50 dtmax=0.5 }
 
   # Tolerance for poisson
-  ProjectionParams { tolerance = 1.e-6 nitermax = 15000}
-  ApproxProjectionParams { tolerance = 1.e-6 nitermax = 15000}
+  #ProjectionParams { tolerance = 1.e-6 nitermax = 15000}
+  #ApproxProjectionParams { tolerance = 1.e-6 nitermax = 15000}
 
 
   # parameters of various advection schemes
-  GfsAdvectionParams {
-  cfl = 0.4
-  }
+  #GfsAdvectionParams {
+  #cfl = 0.6
+  #}
   # Variable for the interface (VOF)
   VariableTracerVOFHeight T
 
@@ -376,7 +377,7 @@
   #VariableCurvature K T
 
   # Coefficient for surface tension = 1/We^2
-#  SourceTension T {1./(We*We)} K
+  # SourceTension T {1./(We*We)} K
 
   # Init of the velocity field
 #  wave paddle just U or projection on the normal of the paddle?
@@ -394,7 +395,7 @@
 
 
   # Density
-  PhysicalParams { alpha = 1./RHO(T1) }
+  PhysicalParams { alpha = 1./RHO(T1) g=g }
 
   # Viscosity
   ##Viscous flow and absorbing zone
@@ -407,9 +408,9 @@
   #Source {} V (-g)
   #Source {} U (0.)
   # Use the reduced gravity approach
-  VariablePosition Z T z
   # g = -g, g'=-g*(rho1-rho2) 
-  SourceTension T -g*(1.-ratio_rho ) Z
+  VariablePosition Y T y
+  SourceTension T (-Greduced*(1.-ratio_rho )) Y
   
   
   # AMR
@@ -432,28 +433,33 @@
 #  OutputTime { istep = 1 } balance
 #  OutputBalance { istep = 1 } balance
    
-  GfsOutputSimulation { istep = 1 } Flume-test-viscouslayer-AMR-%ld.gfs
+#  GfsOutputSimulation { istep = 1 } Flume-test-Reduced-gravity-%ld.gfs
+  GfsOutputSimulation { istep = 1 } Test-%ld.gfs
 #  GfsOutputSimulation { step = 0.1 }  snapshot-%g.vtk { format = VTK }
   GfsOutputTime            { istep = 1 } stdout
   GfsOutputProjectionStats { istep = 1 } stdout
-#  GfsOutputPPM             { step = 0.1 } test.ppm {
-#    v = T1 
-#    min = 0
-#    max =  1.
-#  }
+  GfsOutputPPM             { step = 0.5 } test.ppm {
+    v = T1 
+    min = 0
+    max =  1.
+  }
+  GfsOutputPPM             { step = 0.5 } {ppm2mpeg > movie.mpg} {
+    v = T1 
+    min = 0
+    max =  1.
+  }
+  
 }
 GfsBox{
 #  Slip BC
   top = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  Slip BC
   bottom = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  wave paddle just U or projection on the normal of the paddle?
   left = Boundary {
@@ -467,13 +473,11 @@ GfsBox{
   top = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  Slip BC
   bottom = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 }
 GfsBox{
@@ -481,13 +485,11 @@ GfsBox{
   top = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  Slip BC
   bottom = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 }
 GfsBox{
@@ -495,13 +497,11 @@ GfsBox{
   top = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  Slip BC
   bottom = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 }
 GfsBox{
@@ -509,13 +509,11 @@ GfsBox{
   top = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  Slip BC
   bottom = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 }
 GfsBox{
@@ -523,13 +521,11 @@ GfsBox{
   top = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  Slip BC
   bottom = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 }
 GfsBox{
@@ -537,13 +533,11 @@ GfsBox{
   top = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  Slip BC
   bottom = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 }
 GfsBox{
@@ -551,13 +545,11 @@ GfsBox{
   top = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  Slip BC
   bottom = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 }
 GfsBox{
@@ -565,13 +557,11 @@ GfsBox{
   top = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  Slip BC
   bottom = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 }
 GfsBox{
@@ -579,13 +569,11 @@ GfsBox{
   top = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  Slip BC
   bottom = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 }
 GfsBox{
@@ -593,13 +581,11 @@ GfsBox{
   top = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  Slip BC
   bottom = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 }
 GfsBox{
@@ -607,18 +593,15 @@ GfsBox{
   top = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
 #  Slip BC
   bottom = Boundary {
     BcNeumann U 0
     BcDirichlet V 0
-    BcNeumann T 0
   }
   right = Boundary {
     BcNeumann U 0.
     BcNeumann V 0
-    BcNeumann T 0
   }
 }
 1 2 right
