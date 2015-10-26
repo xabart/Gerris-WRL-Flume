@@ -103,9 +103,9 @@
     double   PN=5;
     double   PXconv=-1.;
     double   PZconv=0.;
-    double paddletimeshift = -2.;
+    double paddletimeshift = -10.;
     #define  Papp (H0)
-    #define  PTotalLength  (1.2*H0)
+    #define  PTotalLength  (1.5*H0)
 
 // ###############################################################
 // ##   2 fluid phases
@@ -342,24 +342,44 @@
   }
 ###############################################################
 # http://gfs.sourceforge.net/wiki/index.php/Hypre
-#  GModule hypre {
-#  solver_type      = boomer_amg
-#  precond_type     = none
-#  relax_type	    = gs-j
-#  coarsening_type  = cgc_e
-#  cycle_type	    = 1
-#  nlevel	    = 0
-#  verbose	    = 0
-# }
+  GModule hypre {
+  solver_type	   = boomer_amg
+  precond_type     = none
+  relax_type	   = gs-j
+  coarsening_type  = cgc_e
+  cycle_type	   = 1
+  nlevel	   = 0
+  verbose	   = 0
+ }
 ##########################################
   # Grid Resolution
   Refine 6
 
   # Time
-  Time { end = 50 dtmax=0.5 }
+  #Time { end = 1000 dtmax=0.5 }
+  Time { end = 15 dtmax=0.1 }
 
   # Tolerance for poisson
-  #ProjectionParams { tolerance = 1.e-6 nitermax = 15000}
+  GfsProjectionParams {
+   tolerance = 1e-6
+   nrelax = 4
+   erelax = 1
+   minlevel = 0
+   nitermax = 15000
+   nitermin = 1
+   omega = 1
+   function = 0
+   }
+  ApproxProjectionParams {
+   tolerance = 1e-6
+   nrelax = 4
+   erelax = 1
+   minlevel = 0
+   nitermax = 15000
+   nitermin = 1
+   omega = 1
+   function = 0
+   }
   #ApproxProjectionParams { tolerance = 1.e-6 nitermax = 15000}
 
 
@@ -414,9 +434,9 @@
   
   
   # AMR
-  # AdaptVorticity { istep = 1 } { maxlevel = 9 cmax = 1e-2 }
-  # AdaptGradient { istep = 1 } { maxlevel = 9 cmax = 1e-2 } T
-  # AdaptGradient { istep = 1 } { cmax = 0.0 maxlevel = LEVEL1 } (U*T)
+  #AdaptVorticity { istep = 1 } { maxlevel = 9 cmax = 1e-2 }
+  #AdaptGradient { istep = 1 } { maxlevel = 9 cmax = 1e-2 } T
+  #AdaptGradient { istep = 1 } { cmax = 0.0 maxlevel = 9 } (U*T)
 
 
   RemoveDroplets { istep = 1 } T -2
@@ -434,7 +454,7 @@
 #  OutputBalance { istep = 1 } balance
    
 #  GfsOutputSimulation { istep = 1 } Flume-test-Reduced-gravity-%ld.gfs
-  GfsOutputSimulation { istep = 1 } Test-%ld.gfs
+#  GfsOutputSimulation { istep = 1 } Test-%ld.gfs
 #  GfsOutputSimulation { step = 0.1 }  snapshot-%g.vtk { format = VTK }
   GfsOutputTime            { istep = 1 } stdout
   GfsOutputProjectionStats { istep = 1 } stdout
@@ -443,12 +463,12 @@
     min = 0
     max =  1.
   }
-  GfsOutputPPM             { step = 0.5 } {ppm2mpeg > movie.mpg} {
-    v = T1 
-    min = 0
-    max =  1.
-  }
-  
+#  GfsOutputPPM             { step = 0.5 } {ppm2mpeg > movie.mpg} {
+#    v = T1 
+#    min = 0
+#    max =  1.
+#  }
+   GfsOutputLocation { istep = 1 } data.dat positionXYZ
 }
 GfsBox{
 #  Slip BC
@@ -465,6 +485,8 @@ GfsBox{
   left = Boundary {
     BcDirichlet U (PADDLEAMPLITUDE*Class3PaddleVelocityU(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength))
     BcDirichlet V (PADDLEAMPLITUDE*Class3PaddleVelocityV(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength))
+#    BcDirichlet U 0
+#    BcDirichlet V 0
     BcNeumann T 0
   }
 }
@@ -602,6 +624,7 @@ GfsBox{
   right = Boundary {
     BcNeumann U 0.
     BcNeumann V 0
+    BcNeumann T 0
   }
 }
 1 2 right
