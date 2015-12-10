@@ -1,0 +1,2 @@
+(for ((a=0; a <= 100 ; a++)); do echo 0 `echo $a | awk '{print $1/100.}'` 0; done) > positionXYZ
+(for ((a=0; a <= 130 ; a++)); do echo `echo $a | awk '{print $1/10.}'` 0 0; done) > positionXYZ

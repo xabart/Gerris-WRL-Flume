@@ -271,6 +271,13 @@
         return OST ;
      }
 
+     double Class3PaddleOSTT(double Omega,double t,double coeft2,double Phase){
+        double CCC = (Omega *(t - 0.5*Omega *coeft2*pow(t,2))+Phase) ;
+        double OSTT = -pow(Omega,2) *coeft2*cos(CCC)-pow(Omega,2)* \
+	   pow(1.-Omega *coeft2*t,2)*sin(CCC); 
+        return OSTT ;
+     }
+
      double Class3PaddleDAMP(double Omega,double t,double N){
         double AAA= (4.*(-2.*N*M_PI + Omega*t))/(N *M_PI);
         double BBB= (4.*Omega*t)/(N*M_PI);
@@ -291,6 +298,21 @@
         return DAMPT;
      }
 
+     double Class3PaddleDAMPTT(double Omega,double t,double N){
+        double AAA= (4.*(-2.*N*M_PI + Omega*t))/(N *M_PI);
+        double BBB= (4.*Omega*t)/(N*M_PI);
+        double EEE= (32.*pow(Omega,2)) / (N*M_PI);
+	
+        double SBBB2=1./(pow(cosh(BBB),2));
+	double SAAA2=1./(pow(cosh(AAA),2));
+	double TAAA=tanh(AAA);
+	double TBBB=tanh(BBB);
+	
+	double DAMPTT=EEE*(-SBBB2*SAAA2-SBBB2*TBBB*(1.-TAAA)+SAAA2*(1.+TBBB)*TAAA);
+
+        return DAMPTT;
+     }
+
      double Class3MotionLaw(double Omega,double t,double coeft2,double N,double Xconv,double Zconv,double ZZ,double gravity){
            return Class3PaddleOS(Omega,t,coeft2,Phase3D(Xconv,Zconv,Omega,ZZ,gravity))*Class3PaddleDAMP(Omega,t,N) ;
      }
@@ -298,6 +320,12 @@
      double Class3MotionLawVelocity(double Omega,double t,double coeft2,double N,double Xconv,double Zconv,double ZZ,double gravity){
            return Class3PaddleOST(Omega,t,coeft2,Phase3D(Xconv,Zconv,Omega,ZZ,gravity))*Class3PaddleDAMP(Omega,t,N) \
            + Class3PaddleOS(Omega,t,coeft2,Phase3D(Xconv,Zconv,Omega,ZZ,gravity))*Class3PaddleDAMPT(Omega,t,N);
+     }
+
+     double Class3MotionLawAcceleration(double Omega,double t,double coeft2,double N,double Xconv,double Zconv,double ZZ,double gravity){
+           return Class3PaddleOSTT(Omega,t,coeft2,Phase3D(Xconv,Zconv,Omega,ZZ,gravity))*Class3PaddleDAMP(Omega,t,N) \
+           + 2.* Class3PaddleOST(Omega,t,coeft2,Phase3D(Xconv,Zconv,Omega,ZZ,gravity))*Class3PaddleDAMPT(Omega,t,N) \
+           + Class3PaddleOS(Omega,t,coeft2,Phase3D(Xconv,Zconv,Omega,ZZ,gravity))*Class3PaddleDAMPTT(Omega,t,N);
      }
 
      double Class3Paddle(double YY,double ZZ,double t,double Omega,double coeft2,double N,double Xconv,double Zconv,double gravity,double a, double TotalLength){
@@ -324,6 +352,13 @@
      double Class3PaddleVelocityV(double YY,double ZZ,double t,double Omega,double coeft2,double N,double Xconv,double Zconv,double gravity,double a, double TotalLength){
            double S0=Class3MotionLawVelocity(Omega, t, coeft2, N, Xconv, Zconv, ZZ, gravity);
            return PaddleStraitShape(YY, S0, a, TotalLength)*PaddleStraitShapeNormalSine(YY, S0, a, TotalLength);
+           //return PaddleFlexiShape (YY, S0, a, TotalLength);
+           //return PaddlePiston(YY, S0, TotalLength);
+     }
+     double Class3PaddleAccelerationU(double YY,double ZZ,double t,double Omega,double coeft2,double N, \
+             double Xconv,double Zconv,double gravity,double a, double TotalLength){
+           double S0=Class3MotionLawAcceleration(Omega, t, coeft2, N, Xconv, Zconv, ZZ, gravity);
+           return PaddleStraitShape(YY, S0, a, TotalLength)*PaddleStraitShapeNormalCosine(YY, S0, a, TotalLength);
            //return PaddleFlexiShape (YY, S0, a, TotalLength);
            //return PaddlePiston(YY, S0, TotalLength);
      }
@@ -432,6 +467,8 @@
   VariablePosition Y T y
   SourceTension T (-Greduced*(1.-ratio_rho )) Y
   
+  # Term for the wavemaker
+  #GfsFunction GradPx (dx("P"))
   
   # AMR
   #AdaptVorticity { istep = 1 } { maxlevel = 9 cmax = 1e-2 }
@@ -485,9 +522,12 @@ GfsBox{
   left = Boundary {
     BcDirichlet U (PADDLEAMPLITUDE*Class3PaddleVelocityU(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength))
     BcDirichlet V (PADDLEAMPLITUDE*Class3PaddleVelocityV(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength))
+    BcNeumann P (-RHO(T1)*PADDLEAMPLITUDE*Class3PaddleAccelerationU(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp,
+    PTotalLength))
 #    BcDirichlet U 0
 #    BcDirichlet V 0
-    BcNeumann T 0
+#    BcNeumann P (RHO(T1)*PADDLEAMPLITUDE*Class3PaddleAccelerationU(y,0., t+paddletimeshift,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength)-(1./We_w)*ReducedGravity)
+#    BcNeumann T 0
   }
 }
 GfsBox{
